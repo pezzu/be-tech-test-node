@@ -1,5 +1,7 @@
 import jwt from "jsonwebtoken";
-import { Request, Response } from "express";
+import { NextFunction, Request, Response } from "express";
+import config from "../../config";
+import ApiError from "../../helpers/ApiError";
 
 const users = {
   admin: "admin",
@@ -8,20 +10,15 @@ const users = {
 };
 
 export default class AuthController {
-  public static authenticate(req: Request, res: Response): void {
+  public static authenticate(req: Request, res: Response, next: NextFunction): void {
     const { user, password } = req.body;
 
     if (users[user] === password) {
-      var token = jwt.sign({ user }, process.env.SECRET);
+      const token = jwt.sign({ user }, config.secret);
       res.cookie("token", token, { expires: new Date(360000 + Date.now()) });
-
       res.json({ status: "ok" });
     } else {
-      // new AuthError(401, "invalid...")
-      res.status(401).json({
-        status: "Not Authenticated",
-        msg: "Invalid user or passowrd",
-      });
+      next(new ApiError(401, "Invalid user or password"))
     }
   }
 }
