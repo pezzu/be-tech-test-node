@@ -1,6 +1,6 @@
 import { Router } from "express";
 import RecordsController from "./controller";
-import { permissions } from "../../middleware/permissions";
+import { authorize } from "../auth/middleware";
 
 export default class RecordsRouter {
   public static routes(): Router {
@@ -8,28 +8,28 @@ export default class RecordsRouter {
 
     router.get(
       "/",
-      permissions(),
+      authorize(),
       RecordsController.listRecords
     );
     router.post(
       "/",
-      permissions(),
+      authorize(),
       RecordsController.createRecord
     );
     router.get(
       "/:id",
-      permissions(),
+      authorize(),
       RecordsController.lookupRecord,
       RecordsController.readRecord
     );
     router.put(
       "/:id",
-      permissions(["Admin, Editor"]),
+      authorize(["Admin", "Editor"]),
       RecordsController.updateRecord
     );
     router.delete(
       "/:id",
-      permissions(["Admin"]),
+      authorize(["Admin"]),
       RecordsController.deleteRecord
     );
 
