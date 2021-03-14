@@ -16,7 +16,7 @@ export default class AuthController {
     if (users[user] === password) {
       const token = jwt.sign({ user }, config.secret);
       res.cookie("token", token, { expires: new Date(360000 + Date.now()) });
-      res.json({ status: "ok" });
+      res.json({ token });
     } else {
       next(new ApiError(401, "Invalid user or password"))
     }

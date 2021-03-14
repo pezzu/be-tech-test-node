@@ -1,4 +1,4 @@
-import {Schema, model} from 'mongoose';
+import { Schema, model } from "mongoose";
 
 const RecordSchema = new Schema({
   owner: String,
@@ -6,7 +6,6 @@ const RecordSchema = new Schema({
   isEditable: Boolean,
 });
 
-const Record = model('records', RecordSchema);
+const Record = model("records", RecordSchema);
 
 export default Record;
-

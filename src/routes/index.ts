@@ -7,7 +7,7 @@ export default class ApiRouter {
     const router = Router();
 
     router.use("/auth", AuthRouter.routes());
-    router.use("/records", RecordsRouter.routes());
+    router.use("/record", RecordsRouter.routes());
 
     return router;
   }

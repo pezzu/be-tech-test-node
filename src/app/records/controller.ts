@@ -1,13 +1,105 @@
 import { NextFunction, Request, Response } from "express";
+import httpStatus from "http-status";
+import Record from "./model";
+import ApiError from "../../helpers/ApiError";
 
 export default class RecordsController {
-  public static create(req: Request, res: Response, next: NextFunction): void {}
+  private static projection = { text: 1, isEditable: 1 };
 
-  public static read(req: Request, res: Response, next: NextFunction): void {
-    res.json({
-      record: "123",
-    });
+  public static async lookupRecord(
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> {
+    try {
+      const id = req.params.id;
+      const record = await Record.findById(id, RecordsController.projection);
+      if (record) {
+        (req as any).record = record;
+        next();
+      } else {
+        res.status(httpStatus.NOT_FOUND).end();
+      }
+    } catch (error) {
+      error.status = httpStatus.INTERNAL_SERVER_ERROR;
+      next(error);
+    }
   }
-  public static update(req: Request, res: Response, next: NextFunction): void {}
-  public static deleteRecord(req: Request, res: Response, next: NextFunction): void {}
+
+  public static async listRecords(
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> {
+    try {
+      const records = await Record.find(
+        {},
+        RecordsController.projection
+      ).exec();
+      res.json(records);
+    } catch (error) {
+      error.status = httpStatus.INTERNAL_SERVER_ERROR;
+      next(error);
+    }
+  }
+
+  public static async createRecord(
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> {
+    const record = new Record(req.body);
+
+    try {
+      const saved = await record.save();
+      res.json(saved).status(httpStatus.CREATED);
+    } catch (error) {
+      if (error.name === "MongoError" && error.code === 11000) {
+        next(new ApiError(httpStatus.CONFLICT, "Record already exists"));
+      } else {
+        error.status = httpStatus.INTERNAL_SERVER_ERROR;
+        next(error);
+      }
+    }
+  }
+
+  public static async readRecord(
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> {
+    res.json(((req as unknown) as { record: object }).record); // Really?
+  }
+
+  public static async updateRecord(
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> {
+    try {
+      const record = await Record.findByIdAndUpdate(
+        req.params.id,
+        req.body,
+        { returnOriginal: false, projection: RecordsController.projection }
+      );
+      res.json(record);
+    } catch (error) {
+      error.status = httpStatus.INTERNAL_SERVER_ERROR;
+      next(error);
+    }
+  }
+
+  public static async deleteRecord(
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> {
+    try {
+      await Record.findByIdAndDelete(req.params.id);
+      res.status(httpStatus.OK).end();
+    } catch (error) {
+      error.status = httpStatus.INTERNAL_SERVER_ERROR;
+      next(error);
+    }
+  }
 }
