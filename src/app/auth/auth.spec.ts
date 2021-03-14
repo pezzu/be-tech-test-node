@@ -1,7 +1,7 @@
 import request from "supertest";
 import app from "../../app";
 
-describe("POST /auth", () => {
+describe("POST /api/auth", () => {
   it("Returns token for authenticated user", (done) => {
     return request(app)
       .post("/api/auth")
