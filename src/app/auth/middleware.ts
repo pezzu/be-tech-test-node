@@ -17,6 +17,7 @@ export function authorize(roles: Array<string> = []) {
         } else {
           const user = User.findOne((decoded as {user: string}).user);
           if (roles.length === 0 || roles.includes(user.role)) {
+            (req as any).user = user;
             next();
           } else {
             next(

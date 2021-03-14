@@ -4,7 +4,7 @@ import Record from "./model";
 import ApiError from "../../helpers/ApiError";
 
 export default class RecordsController {
-  private static projection = { text: 1, isEditable: 1 };
+  private static projection = { text: 1, isEditable: 1, owner: 1 };
 
   public static async lookupRecord(
     req: Request,
@@ -48,7 +48,7 @@ export default class RecordsController {
     res: Response,
     next: NextFunction
   ): Promise<void> {
-    const record = new Record(req.body);
+    const record = new Record({ ...req.body, owner: (req as any).user.role });
 
     try {
       const saved = await record.save();
@@ -77,11 +77,10 @@ export default class RecordsController {
     next: NextFunction
   ): Promise<void> {
     try {
-      const record = await Record.findByIdAndUpdate(
-        req.params.id,
-        req.body,
-        { returnOriginal: false, projection: RecordsController.projection }
-      );
+      const record = await Record.findByIdAndUpdate(req.params.id, req.body, {
+        returnOriginal: false,
+        projection: RecordsController.projection,
+      });
       res.json(record);
     } catch (error) {
       error.status = httpStatus.INTERNAL_SERVER_ERROR;
