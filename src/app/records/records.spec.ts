@@ -450,12 +450,12 @@ describe("/PUT /api/record/", () => {
     const modified = { ...record, ...update };
     const response = await agent
       .put(`/api/record/${id}`)
-      .send(modified)
+      .send(update)
       .set("Accept", "application/json")
       .set("x-access-token", authResponse.body.token);
 
     expect(response.status).toBe(200);
-    expect(response.body).toMatchObject(modified);
+    expect(response.body).toMatchObject(update);
   };
 
   const testCannotUpdate = async (name: string, id: string, update: object) => {
@@ -469,7 +469,7 @@ describe("/PUT /api/record/", () => {
     const modified = { ...record, ...update };
     const response = await agent
       .put(`/api/record/${id}`)
-      .send(modified)
+      .send(update)
       .set("Accept", "application/json")
       .set("x-access-token", authResponse?.body?.token || "fake");
 
@@ -530,7 +530,6 @@ describe("/PUT /api/record/", () => {
       .catch((err) => done(err));
   });
 
-  //ToDo:
   it("Editor user cannot update Tester and Editor records when isEditable is false", async (done) => {
     const editorRecords = mockRecords.filter(
       (rec) => rec.owner === "Editor" || rec.owner === "Tester"
