@@ -808,7 +808,7 @@ agent-base@6:
   dependencies:
     debug "4"
 
-ajv@^6.12.3:
+ajv@^6.12.3, ajv@^6.6.2:
   version "6.12.6"
   resolved "https://registry.yarnpkg.com/ajv/-/ajv-6.12.6.tgz#baf5a62e802b07d977034586f8c3baf5adf26df4"
   integrity sha512-j3fVLgvTo527anyYyJOGTYJbG+vnnQYvE0m5mmkc1TK+nxAppkCLMIL0aZ4dblVCNoGShhm+kzE4ZUykBoMg4g==
@@ -1872,6 +1872,13 @@ expect@^26.6.2:
     jest-matcher-utils "^26.6.2"
     jest-message-util "^26.6.2"
     jest-regex-util "^26.0.0"
+
+express-json-validator-middleware@~2.0.0:
+  version "2.0.0"
+  resolved "https://registry.yarnpkg.com/express-json-validator-middleware/-/express-json-validator-middleware-2.0.0.tgz#bb8a8592b82631474d48974e6032e25e8d960cb7"
+  integrity sha512-b/lecy6DWojDWhUmTk1ehjVjMKff1vCja4L9EjxI4Gksb62z00mOrXYjkghwu6MttWkQGk9LX+kjBq6dGBzPEA==
+  dependencies:
+    ajv "^6.6.2"
 
 express@^4.17.1:
   version "4.17.1"

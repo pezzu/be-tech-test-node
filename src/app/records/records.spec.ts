@@ -447,7 +447,6 @@ describe("/PUT /api/record/", () => {
       .send({ name, password: user.password });
 
     const record = mockRecords.find((rec) => rec._id === id);
-    const modified = { ...record, ...update };
     const response = await agent
       .put(`/api/record/${id}`)
       .send(update)
@@ -466,7 +465,6 @@ describe("/PUT /api/record/", () => {
       .send({ name, password: user?.password || "fake" });
 
     const record = mockRecords.find((rec) => rec._id === id);
-    const modified = { ...record, ...update };
     const response = await agent
       .put(`/api/record/${id}`)
       .send(update)
@@ -492,7 +490,7 @@ describe("/PUT /api/record/", () => {
     );
 
     const fields = mockRecords.map(async (rec) =>
-      testCannotUpdate("tester", rec._id, { isEditable: !rec.isEditable })
+      testCannotUpdate("tester", rec._id, { text: rec.text, isEditable: !rec.isEditable })
     );
 
     await Promise.all([...fields, ...texts])
@@ -522,7 +520,7 @@ describe("/PUT /api/record/", () => {
         testCannotUpdate(
           "editor",
           rec._id,
-          { isEditable: !rec.isEditable }
+          { text: rec.text, isEditable: !rec.isEditable }
         )
       )
     )
@@ -564,7 +562,7 @@ describe("/PUT /api/record/", () => {
     );
 
     const fields = mockRecords.map(async (rec) =>
-      testCanUpdate("admin", rec._id, { isEditable: !rec.isEditable })
+      testCanUpdate("admin", rec._id, { text: rec.text, isEditable: !rec.isEditable })
     );
 
     await Promise.all([...texts, ...fields])

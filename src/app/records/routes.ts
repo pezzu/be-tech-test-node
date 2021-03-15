@@ -1,6 +1,10 @@
 import { Router } from "express";
+import { Validator } from "express-json-validator-middleware";
 import RecordsController from "./controller";
 import { authorize } from "../auth/middleware";
+import { RecordSchema } from "./schema";
+
+const validator = new Validator({ allErrors: true });
 
 export default class RecordsRouter {
   public static routes(): Router {
@@ -14,16 +18,18 @@ export default class RecordsRouter {
     router.post(
       "/",
       authorize(),
+      validator.validate({ body: RecordSchema }),
       RecordsController.createRecord
     );
     router.get(
-      "/:id",
-      authorize(),
+      "/:id", 
+      authorize(), 
       RecordsController.readRecord
     );
     router.put(
       "/:id",
       authorize(),
+      validator.validate({ body: RecordSchema }),
       RecordsController.updateRecord
     );
     router.delete(

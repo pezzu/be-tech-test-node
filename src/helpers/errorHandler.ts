@@ -1,4 +1,5 @@
 import { Request, Response, NextFunction } from "express";
+import { ValidationError } from "express-json-validator-middleware";
 import ApiError from "./ApiError";
 
 export function errorHandler(
@@ -7,10 +8,19 @@ export function errorHandler(
   res: Response,
   next: NextFunction
 ): void {
-  res.status(err.status || 500).json({
-    error: {
-      message: err.message,
-      status: err.status,
-    },
-  });
+  if (err instanceof ValidationError) {
+    res.status(400).json({
+      error: {
+        message: ((err as unknown) as { validationErrors: object }).validationErrors,
+        status: 400,
+      },
+    });
+  } else {
+    res.status(err.status).json({
+      error: {
+        message: err.message,
+        status: err.status,
+      },
+    });
+  }
 }
