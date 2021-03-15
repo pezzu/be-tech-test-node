@@ -23,12 +23,12 @@ export default class RecordsRouter {
     );
     router.put(
       "/:id",
-      authorize(["Admin", "Editor"]),
+      authorize(),
       RecordsController.updateRecord
     );
     router.delete(
       "/:id",
-      authorize(["Admin"]),
+      authorize(),
       RecordsController.deleteRecord
     );
 

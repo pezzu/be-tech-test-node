@@ -3,7 +3,56 @@ import { response } from "express";
 import request from "supertest";
 import app from "../../app";
 import { Record } from "./model";
-import { User } from "../auth/model";
+import { Role } from "../auth/model/role";
+import { User } from "../auth/model/user";
+import httpStatus from "http-status";
+
+const mockUsers = [
+  {
+    name: "admin",
+    password: "admin",
+    role: "Admin",
+  },
+  {
+    name: "editor",
+    password: "verysecretpassword",
+    role: "Editor",
+  },
+  {
+    name: "tester",
+    password: "123",
+    role: "Tester",
+  },
+];
+
+const mockRoles = [
+  {
+    name: "Admin",
+    tables: ["Admin", "Editor", "Tester"],
+    operations: ["CREATE", "READ", "UPDATE", "DELETE"],
+    editFields: ["text", "isEditable"],
+    editRestrictions: [],
+  },
+  {
+    name: "Editor",
+    tables: ["Editor", "Tester"],
+    operations: ["CREATE", "READ", "UPDATE"],
+    editFields: ["text"],
+    editRestrictions: [
+      {
+        field: "isEditable",
+        condition: true,
+      },
+    ],
+  },
+  {
+    name: "Tester",
+    tables: ["Tester"],
+    operations: ["CREATE", "READ"],
+    editFields: [],
+    editRestrictions: [],
+  },
+];
 
 const mockRecords = [
   {
@@ -64,6 +113,8 @@ afterAll(async () => {
 
 beforeEach(async (done) => {
   try {
+    await User.insertMany(mockUsers);
+    await Role.insertMany(mockRoles);
     await Record.insertMany(mockRecords);
     done();
   } catch (err) {
@@ -73,6 +124,8 @@ beforeEach(async (done) => {
 
 afterEach(async (done) => {
   try {
+    await User.remove({}).exec();
+    await Role.remove({}).exec();
     await Record.remove({}).exec();
     done();
   } catch (err) {
@@ -185,10 +238,11 @@ describe("/GET /api/record/:id", () => {
     done
   ): Promise<void> => {
     try {
+      const user = mockUsers.find((user) => user.name === name);
       const agent = request(app);
       const authResponse = await agent
         .post("/api/auth")
-        .send({ name, password: User.findOne(name).password });
+        .send({ name, password: user.password });
 
       const response = await agent
         .get(`/api/record/${id}`)
@@ -211,10 +265,11 @@ describe("/GET /api/record/:id", () => {
     done
   ): Promise<void> => {
     try {
+      const user = mockUsers.find((user) => user.name === name);
       const agent = request(app);
       const authResponse = await agent
         .post("/api/auth")
-        .send({ name, password: User.findOne(name).password });
+        .send({ name, password: user.password });
 
       const response = await agent
         .get(`/api/record/${id}`)
@@ -384,92 +439,65 @@ describe("/POST /api/record/", () => {
 });
 
 describe("/PUT /api/record/", () => {
-  const testCanUpdate = async (
-    name: string,
-    id: string,
-    update: object,
-    done
-  ) => {
-    try {
-      const agent = request(app);
-      const authResponse = await agent
-        .post("/api/auth")
-        .send({ name, password: User.findOne(name).password });
+  const testCanUpdate = async (name: string, id: string, update: object) => {
+    const user = mockUsers.find((user) => user.name === name);
+    const agent = request(app);
+    const authResponse = await agent
+      .post("/api/auth")
+      .send({ name, password: user.password });
 
-      const record = mockRecords.find((rec) => rec._id === id);
-      const modified = { ...record, ...update };
-      const response = await agent
-        .put(`/api/record/${id}`)
-        .send(modified)
-        .set("Accept", "application/json")
-        .set("x-access-token", authResponse.body.token);
+    const record = mockRecords.find((rec) => rec._id === id);
+    const modified = { ...record, ...update };
+    const response = await agent
+      .put(`/api/record/${id}`)
+      .send(modified)
+      .set("Accept", "application/json")
+      .set("x-access-token", authResponse.body.token);
 
-      expect(response.status).toBe(200);
-
-      const dbRecord = await Record.findById(id).exec();
-      // expect(dbRecord).toMatchObject(modified);
-
-      done();
-    } catch (err) {
-      done(err);
-    }
+    expect(response.status).toBe(200);
+    expect(response.body).toMatchObject(modified);
   };
 
-  const testCannotUpdate = async (
-    name: string,
-    id: string,
-    update: object,
-    done
-  ) => {
-    try {
-      const agent = request(app);
-      const authResponse = await agent
-        .post("/api/auth")
-        .send({ name, password: User.findOne(name)?.password || "fake" });
+  const testCannotUpdate = async (name: string, id: string, update: object) => {
+    const user = mockUsers.find((user) => user.name === name);
+    const agent = request(app);
+    const authResponse = await agent
+      .post("/api/auth")
+      .send({ name, password: user?.password || "fake" });
 
-      const record = mockRecords.find((rec) => rec._id === id);
-      const modified = { ...record, ...update };
-      const response = await agent
-        .put(`/api/record/${id}`)
-        .send(modified)
-        .set("Accept", "application/json")
-        .set("x-access-token", authResponse?.body?.token || "");
+    const record = mockRecords.find((rec) => rec._id === id);
+    const modified = { ...record, ...update };
+    const response = await agent
+      .put(`/api/record/${id}`)
+      .send(modified)
+      .set("Accept", "application/json")
+      .set("x-access-token", authResponse?.body?.token || "fake");
 
-      expect(response.status).toBe(401);
-
-      done();
-    } catch (err) {
-      done(err);
-    }
+    expect(response.status).toBe(401);
   };
 
   it("Unauthenticated user cannot update any record", async (done) => {
     await Promise.all(
-      mockRecords.map(
-        async (rec) =>
-          await testCannotUpdate("guest", rec._id, { text: "New text" }, done)
+      mockRecords.map(async (rec) =>
+        testCannotUpdate("guest", rec._id, { text: "New text" })
       )
-    );
+    )
+      .then(() => done())
+      .catch((err) => done(err));
   });
 
   it("Tester user cannot update any record", async (done) => {
-    await Promise.all(
-      mockRecords.map(
-        async (rec) =>
-          await testCannotUpdate("tester", rec._id, { text: "New text" }, done)
-      )
+    const texts = mockRecords.map(async (rec) =>
+      testCannotUpdate("tester", rec._id, { text: "New text" })
     );
-    await Promise.all(
-      mockRecords.map(
-        async (rec) =>
-          await testCannotUpdate(
-            "tester",
-            rec._id,
-            { isEditable: !rec.isEditable },
-            done
-          )
-      )
+
+    const fields = mockRecords.map(async (rec) =>
+      testCannotUpdate("tester", rec._id, { isEditable: !rec.isEditable })
     );
+
+    await Promise.all([...fields, ...texts])
+      .then(() => done())
+      .catch((err) => done(err));
   });
 
   it("Editor user can update Tester and Editor records [text] field when isEditable is true", async (done) => {
@@ -480,27 +508,29 @@ describe("/PUT /api/record/", () => {
     await Promise.all(
       editorRecords
         .filter((rec) => rec.isEditable)
-        .map(
-          async (rec) =>
-            await testCanUpdate("editor", rec._id, { text: "New text" }, done)
+        .map(async (rec) =>
+          testCanUpdate("editor", rec._id, { text: "New text" })
         )
-    );
+    )
+      .then(() => done())
+      .catch((err) => done(err));
   });
 
   it("Editor user cannot update Tester and Editor records [isEditable] field", async (done) => {
     await Promise.all(
-      mockRecords.map(
-        async (rec) =>
-          await testCannotUpdate(
-            "editor",
-            rec._id,
-            { isEditable: !rec.isEditable },
-            done
-          )
+      mockRecords.map(async (rec) =>
+        testCannotUpdate(
+          "editor",
+          rec._id,
+          { isEditable: !rec.isEditable }
+        )
       )
-    );
+    )
+      .then(() => done())
+      .catch((err) => done(err));
   });
 
+  //ToDo:
   it("Editor user cannot update Tester and Editor records when isEditable is false", async (done) => {
     const editorRecords = mockRecords.filter(
       (rec) => rec.owner === "Editor" || rec.owner === "Tester"
@@ -509,121 +539,106 @@ describe("/PUT /api/record/", () => {
     await Promise.all(
       editorRecords
         .filter((rec) => !rec.isEditable)
-        .map(
-          async (rec) =>
-            await testCannotUpdate(
-              "editor",
-              rec._id,
-              { text: "New text" },
-              done
-            )
+        .map(async (rec) =>
+          testCannotUpdate("editor", rec._id, { text: "New text" })
         )
-    );
+    )
+      .then(() => done())
+      .catch((err) => done(err));
   });
 
   it("Editor user cannot update Admin a record", async (done) => {
     const adminRecords = mockRecords.filter((rec) => rec.owner === "Admin");
 
     await Promise.all(
-      adminRecords.map(
-        async (rec) =>
-          await testCannotUpdate("editor", rec._id, { text: "New text" }, done)
+      adminRecords.map(async (rec) =>
+        testCannotUpdate("editor", rec._id, { text: "New text" })
       )
-    );
+    )
+      .then(() => done())
+      .catch((err) => done(err));
   });
 
   it("Admin user can update any record", async (done) => {
-    await Promise.all(
-      mockRecords.map(
-        async (rec) =>
-          await testCanUpdate("admin", rec._id, { text: "New text" }, done)
-      )
+    const texts = mockRecords.map(async (rec) =>
+      testCanUpdate("admin", rec._id, { text: "New text" })
     );
-    await Promise.all(
-      mockRecords.map(
-        async (rec) =>
-          await testCanUpdate(
-            "admin",
-            rec._id,
-            { isEditable: !rec.isEditable },
-            done
-          )
-      )
+
+    const fields = mockRecords.map(async (rec) =>
+      testCanUpdate("admin", rec._id, { isEditable: !rec.isEditable })
     );
+
+    await Promise.all([...texts, ...fields])
+      .then(() => done())
+      .catch((err) => done(err));
   });
 });
 
 describe("/DELETE /api/record/", () => {
-  const testCanDelete = async (name: string, id: string, done) => {
-    try {
-      const agent = request(app);
-      const authResponse = await agent
-        .post("/api/auth")
-        .send({ name, password: User.findOne(name).password });
+  const testCanDelete = async (name: string, id: string) => {
+    const user = mockUsers.find((user) => user.name === name);
+    const agent = request(app);
+    const authResponse = await agent
+      .post("/api/auth")
+      .send({ name, password: user.password });
 
-      const response = await agent
-        .delete(`/api/record/${id}`)
-        .set("Accept", "application/json")
-        .set("x-access-token", authResponse.body.token);
+    const response = await agent
+      .delete(`/api/record/${id}`)
+      .set("Accept", "application/json")
+      .set("x-access-token", authResponse.body.token);
 
-      expect(response.status).toBe(200);
+    expect(response.status).toBe(200);
 
-      const dbRecord = await Record.findById(id).exec();
-      expect(dbRecord).toBeNull();
-      done();
-    } catch (err) {
-      done(err);
-    }
+    const dbRecord = await Record.findById(id).exec();
+    expect(dbRecord).toBeNull();
   };
 
-  const testCannotDelete = async (name: string, id: string, done) => {
-    try {
-      const agent = request(app);
-      const authResponse = await agent
-        .post("/api/auth")
-        .send({ name, password: User.findOne(name)?.password || "fake" });
+  const testCannotDelete = async (name: string, id: string) => {
+    const user = mockUsers.find((user) => user.name === name);
+    const agent = request(app);
+    const authResponse = await agent
+      .post("/api/auth")
+      .send({ name, password: user?.password || "fake" });
 
-      const response = await agent
-        .delete(`/api/record/${id}`)
-        .set("Accept", "application/json")
-        .set("x-access-token", authResponse?.body?.token || "");
+    const response = await agent
+      .delete(`/api/record/${id}`)
+      .set("Accept", "application/json")
+      .set("x-access-token", authResponse?.body?.token || "");
 
-      expect(response.status).toBe(401);
-      done();
-    } catch (err) {
-      done(err);
-    }
+    expect(response.status).toBe(401);
+    const dbRecord = await Record.findById(id).exec();
+    expect(dbRecord).not.toBeNull();
   };
 
   it("Unauthenticated user cannot delete a record", async (done) => {
     await Promise.all(
-      mockRecords.map(
-        async (rec) => await testCannotDelete("guest", rec._id, done)
-      )
-    );
+      mockRecords.map(async (rec) => await testCannotDelete("guest", rec._id))
+    )
+      .then(() => done())
+      .catch((err) => done(err));
   });
 
   it("Tester user cannot delete a record", async (done) => {
     await Promise.all(
-      mockRecords.map(
-        async (rec) => await testCannotDelete("tester", rec._id, done)
-      )
-    );
+      mockRecords.map(async (rec) => await testCannotDelete("tester", rec._id))
+    )
+      .then(() => done())
+      .catch((err) => done(err));
   });
 
   it("Editor user cannot delete a record", async (done) => {
     await Promise.all(
-      mockRecords.map(
-        async (rec) => await testCannotDelete("editor", rec._id, done)
-      )
-    );
+      mockRecords.map(async (rec) => await testCannotDelete("editor", rec._id))
+    )
+      .then(() => done())
+      .catch((err) => done(err));
   });
 
   it("Admin user can delete any record", async (done) => {
     await Promise.all(
-      mockRecords.map(
-        async (rec) => await testCanDelete("admin", rec._id, done)
-      )
-    );
+      mockRecords.map(async (rec) => await testCanDelete("admin", rec._id))
+    )
+      .then(() => done())
+      .catch((err) => done(err));
   });
 });

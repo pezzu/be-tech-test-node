@@ -2,7 +2,12 @@ import { NextFunction, Request, Response } from "express";
 import httpStatus from "http-status";
 import { Record, IRecordModel } from "./model";
 import ApiError from "../../helpers/ApiError";
-import { isAccessible } from "../auth/permissions";
+import {
+  isRecordAccessible,
+  isOperationAllowed,
+  isRecordEditable,
+} from "../auth/permissions";
+import { IUserExpanded } from "../../interfaces/user";
 
 export default class RecordsController {
   private static projection = { text: 1, isEditable: 1, owner: 1 };
@@ -12,15 +17,22 @@ export default class RecordsController {
     res: Response,
     next: NextFunction
   ): Promise<void> {
+    const user: IUserExpanded = (req as any).user;
+    if (!isOperationAllowed(user, "READ")) {
+      next(new ApiError(httpStatus.UNAUTHORIZED, "Not enough permissions"));
+      return;
+    }
+
     try {
       const records = await Record.find(
         {},
         RecordsController.projection
       ).exec();
-      res.json(records.filter((rec) => isAccessible((req as any).user, rec)));
+      res.json(
+        records.filter((rec) => isRecordAccessible((req as any).user, rec))
+      );
     } catch (error) {
-      error.status = httpStatus.INTERNAL_SERVER_ERROR;
-      next(error);
+      next(new ApiError(httpStatus.INTERNAL_SERVER_ERROR, error.message));
     }
   }
 
@@ -29,8 +41,16 @@ export default class RecordsController {
     res: Response,
     next: NextFunction
   ): Promise<void> {
-    const record = new Record({ ...req.body, owner: (req as any).user.role });
+    const user: IUserExpanded = (req as any).user;
+    if (!isOperationAllowed(user, "CREATE")) {
+      next(new ApiError(httpStatus.UNAUTHORIZED, "Not enough permissions"));
+      return;
+    }
 
+    const record = new Record({
+      ...req.body,
+      owner: (req as any).user.role.name,
+    });
     try {
       const saved = await record.save();
       res.json(saved).status(httpStatus.CREATED);
@@ -38,8 +58,7 @@ export default class RecordsController {
       if (error.name === "MongoError" && error.code === 11000) {
         next(new ApiError(httpStatus.CONFLICT, "Record already exists"));
       } else {
-        error.status = httpStatus.INTERNAL_SERVER_ERROR;
-        next(error);
+        next(new ApiError(httpStatus.INTERNAL_SERVER_ERROR, error.message));
       }
     }
   }
@@ -49,6 +68,12 @@ export default class RecordsController {
     res: Response,
     next: NextFunction
   ): Promise<void> {
+    const user: IUserExpanded = (req as any).user;
+    if (!isOperationAllowed(user, "READ")) {
+      next(new ApiError(httpStatus.UNAUTHORIZED, "Not enough permissions"));
+      return;
+    }
+
     try {
       const id = req.params.id;
       const record = await Record.findById(
@@ -56,7 +81,7 @@ export default class RecordsController {
         RecordsController.projection
       ).exec();
       if (record) {
-        if (isAccessible((req as any).user, record)) {
+        if (isRecordAccessible((req as any).user, record)) {
           res.json(record);
           next();
         } else {
@@ -75,12 +100,34 @@ export default class RecordsController {
     res: Response,
     next: NextFunction
   ): Promise<void> {
+    const user: IUserExpanded = (req as any).user;
+    if (!isOperationAllowed(user, "UPDATE")) {
+      next(new ApiError(httpStatus.UNAUTHORIZED, "Not enough permissions"));
+      return;
+    }
+
     try {
-      const record = await Record.findByIdAndUpdate(req.params.id, req.body, {
-        returnOriginal: false,
+      const record = await Record.findById(
+        req.params.id,
+        RecordsController.projection
+      ).exec();
+
+      if (!record) {
+        next(new ApiError(httpStatus.NOT_FOUND, "Record not found"));
+        return;
+      }
+
+      if (!isRecordAccessible(user, record) || !isRecordEditable(user, record, req.body)) {
+        next(new ApiError(httpStatus.UNAUTHORIZED, "Not enough permissions"));
+        return;
+      }
+
+      const updated = await Record.findByIdAndUpdate(req.params.id, req.body, {
+        new: true,
         projection: RecordsController.projection,
       }).exec();
-      res.json(record);
+
+      res.json(updated);
     } catch (error) {
       next(new ApiError(httpStatus.INTERNAL_SERVER_ERROR, error.message));
     }
@@ -91,9 +138,15 @@ export default class RecordsController {
     res: Response,
     next: NextFunction
   ): Promise<void> {
+    const user: IUserExpanded = (req as any).user;
+    if (!isOperationAllowed(user, "DELETE")) {
+      next(new ApiError(httpStatus.UNAUTHORIZED, "Not enough permissions"));
+      return;
+    }
+
     try {
       const record = await Record.findByIdAndRemove(req.params.id).exec();
-      if(!record) {
+      if (!record) {
         next(new ApiError(httpStatus.NOT_FOUND, "There is no such record"));
       } else {
         res.status(httpStatus.OK).end();
