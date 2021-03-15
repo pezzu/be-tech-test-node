@@ -1,6 +1,9 @@
-import { Schema, model } from "mongoose";
+import { Schema, model, Document, Model } from "mongoose";
+import { IRecord } from "../../interfaces/record";
 
-const RecordSchema = new Schema({
+export interface IRecordModel extends IRecord, Document {}
+
+const RecordSchema: Schema = new Schema({
   owner: {
     type: String,
     required: true,
@@ -13,9 +16,10 @@ const RecordSchema = new Schema({
   isEditable: {
     type: Boolean,
     default: false,
-  }
+  },
 });
 
-const Record = model("records", RecordSchema);
-
-export default Record;
+export const Record: Model<IRecordModel> = model<IRecordModel>(
+  "records",
+  RecordSchema
+);

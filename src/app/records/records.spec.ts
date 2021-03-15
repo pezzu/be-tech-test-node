@@ -2,7 +2,7 @@ import mongoose from "mongoose";
 import { response } from "express";
 import request from "supertest";
 import app from "../../app";
-import Record from "./model";
+import { Record } from "./model";
 
 const mockRecords = [
   {

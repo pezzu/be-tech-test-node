@@ -1,7 +1,8 @@
 import { NextFunction, Request, Response } from "express";
 import httpStatus from "http-status";
-import Record from "./model";
+import { Record, IRecordModel } from "./model";
 import ApiError from "../../helpers/ApiError";
+import { isAccessible } from "../auth/permissions";
 
 export default class RecordsController {
   private static projection = { text: 1, isEditable: 1, owner: 1 };
@@ -13,7 +14,10 @@ export default class RecordsController {
   ): Promise<void> {
     try {
       const id = req.params.id;
-      const record = await Record.findById(id, RecordsController.projection);
+      const record = await Record.findById(
+        id,
+        RecordsController.projection
+      ).exec();
       if (record) {
         (req as any).record = record;
         next();
@@ -36,7 +40,7 @@ export default class RecordsController {
         {},
         RecordsController.projection
       ).exec();
-      res.json(records);
+      res.json(records.filter((rec) => isAccessible((req as any).user, rec)));
     } catch (error) {
       error.status = httpStatus.INTERNAL_SERVER_ERROR;
       next(error);

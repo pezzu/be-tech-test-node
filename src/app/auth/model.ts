@@ -8,11 +8,17 @@ const users = {
     name: "editor",
     password: "verysecretpassword",
     role: "Editor",
+    restrictions: {
+      tables: ["Editor", "Tester"],
+    },
   },
   tester: {
     name: "tester",
     password: "123",
     role: "Tester",
+    restrictions: {
+      tables: ["Tester"],
+    },
   },
 };
 
