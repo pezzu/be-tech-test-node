@@ -3,6 +3,7 @@ import { response } from "express";
 import request from "supertest";
 import app from "../../app";
 import { Record } from "./model";
+import { User } from "../auth/model";
 
 const mockRecords = [
   {
@@ -160,6 +161,125 @@ describe("/GET /api/record", () => {
     } catch (err) {
       done(err);
     }
+  });
+});
+
+describe("/GET /api/record/:id", () => {
+  it("Unauthenticated user cannot read one record", async (done) => {
+    try {
+      const agent = request(app);
+      const response = await agent
+        .get("/api/record/604da6a918a9cf23ec18404a")
+        .set("Accept", "application/json");
+
+      expect(response.status).toBe(401);
+      done();
+    } catch (err) {
+      done(err);
+    }
+  });
+
+  const testCanReadOne = async (
+    name: string,
+    id: string,
+    done
+  ): Promise<void> => {
+    try {
+      const agent = request(app);
+      const authResponse = await agent
+        .post("/api/auth")
+        .send({ name, password: User.findOne(name).password });
+
+      const response = await agent
+        .get(`/api/record/${id}`)
+        .set("Accept", "application/json")
+        .set("x-access-token", authResponse.body.token);
+
+      expect(response.status).toBe(200);
+      expect(response.body).toMatchObject(
+        mockRecords.find((rec) => rec._id === id)
+      );
+      done();
+    } catch (err) {
+      done(err);
+    }
+  };
+
+  const testCannotReadOne = async (
+    name: string,
+    id: string,
+    done
+  ): Promise<void> => {
+    try {
+      const agent = request(app);
+      const authResponse = await agent
+        .post("/api/auth")
+        .send({ name: "tester", password: "123" });
+
+      const response = await agent
+        .get(`/api/record/${id}`)
+        .set("Accept", "application/json")
+        .set("x-access-token", authResponse.body.token);
+
+      expect(response.status).toBe(401);
+      done();
+    } catch (err) {
+      done(err);
+    }
+  };
+
+  it("Tester user can read Tester record", async (done) => {
+    const recId = "604da6a918a9cf23ec18404a";
+    expect(mockRecords.find((rec) => rec._id === recId).owner).toBe("Tester");
+    await testCanReadOne("tester", recId, done);
+  });
+
+  it("Tester user cannot read Editor record", async (done) => {
+    const recId = "604da6a018a9cf23ec184049";
+    expect(mockRecords.find((rec) => rec._id === recId).owner).toBe("Editor");
+    await testCannotReadOne("tester", recId, done);
+  });
+
+  it("Tester user cannot read Admin record", async (done) => {
+    const recId = "604e59a90ae3ba2b5c4142f4"
+    expect(mockRecords.find((rec) => rec._id === recId).owner).toBe("Admin");
+    await testCannotReadOne("tester", recId, done);
+  });
+
+  it("Editor user can read Tester record", async (done) => {
+    const recId = "604da6a918a9cf23ec18404a";
+    expect(mockRecords.find((rec) => rec._id === recId).owner).toBe("Tester");
+    await testCanReadOne("editor", recId, done);
+  });
+
+  it("Editor user can read Editor record", async (done) => {
+    const recId = "604da6a018a9cf23ec184049";
+    expect(mockRecords.find((rec) => rec._id === recId).owner).toBe("Editor");
+    await testCanReadOne("editor", recId, done);
+  });
+
+  it("Editor user cannot read Admin record", async (done) => {
+    const recId = "604e59a90ae3ba2b5c4142f4";
+    expect(mockRecords.find((rec) => rec._id === recId).owner).toBe("Admin");
+    await testCannotReadOne("admin", recId, done);
+  });
+
+  it("Admin user can read Tester record", async (done) => {
+    const recId = "604da6a918a9cf23ec18404a";
+    expect(mockRecords.find((rec) => rec._id === recId).owner).toBe("Tester");
+    await testCanReadOne("admin", recId, done);
+  });
+
+  it("Admin user can read Editor record", async (done) => {
+    const recId = "604da6a018a9cf23ec184049";
+    expect(mockRecords.find((rec) => rec._id === recId).owner).toBe("Editor");
+    await testCanReadOne("admin", recId, done);
+  });
+
+  it("Admin user can read Admin record", async (done) => {
+    const recId = "604e59a90ae3ba2b5c4142f4";
+    expect(mockRecords.find((rec) => rec._id === recId).owner).toBe("Admin");
+    await testCanReadOne("admin", recId, done);
   });
 });
 

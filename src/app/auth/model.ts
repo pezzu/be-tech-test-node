@@ -22,7 +22,7 @@ const users = {
   },
 };
 
-export default class User {
+export class User {
   public static findOne(name: string): any {
     return users[name];
   }

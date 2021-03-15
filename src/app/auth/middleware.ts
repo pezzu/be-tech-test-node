@@ -3,8 +3,7 @@ import { Request, Response, NextFunction } from "express";
 import httpStatus from "http-status";
 import config from "../../config";
 import ApiError from "../../helpers/ApiError";
-import User from "./model";
-
+import { User } from "./model";
 
 export function authorize(roles: Array<string> = []) {
   return function (req: Request, res: Response, next: NextFunction) {
@@ -15,7 +14,7 @@ export function authorize(roles: Array<string> = []) {
         if (err) {
           next(new ApiError(httpStatus.UNAUTHORIZED, "Invalid token"));
         } else {
-          const user = User.findOne((decoded as {user: string}).user);
+          const user = User.findOne((decoded as { user: string }).user);
           if (roles.length === 0 || roles.includes(user.role)) {
             (req as any).user = user;
             next();

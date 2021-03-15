@@ -19,7 +19,6 @@ export default class RecordsRouter {
     router.get(
       "/:id",
       authorize(),
-      RecordsController.lookupRecord,
       RecordsController.readRecord
     );
     router.put(

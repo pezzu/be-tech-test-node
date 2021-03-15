@@ -7,29 +7,6 @@ import { isAccessible } from "../auth/permissions";
 export default class RecordsController {
   private static projection = { text: 1, isEditable: 1, owner: 1 };
 
-  public static async lookupRecord(
-    req: Request,
-    res: Response,
-    next: NextFunction
-  ): Promise<void> {
-    try {
-      const id = req.params.id;
-      const record = await Record.findById(
-        id,
-        RecordsController.projection
-      ).exec();
-      if (record) {
-        (req as any).record = record;
-        next();
-      } else {
-        res.status(httpStatus.NOT_FOUND).end();
-      }
-    } catch (error) {
-      error.status = httpStatus.INTERNAL_SERVER_ERROR;
-      next(error);
-    }
-  }
-
   public static async listRecords(
     req: Request,
     res: Response,
@@ -72,7 +49,26 @@ export default class RecordsController {
     res: Response,
     next: NextFunction
   ): Promise<void> {
-    res.json(((req as unknown) as { record: object }).record); // Really?
+    try {
+      const id = req.params.id;
+      const record = await Record.findById(
+        id,
+        RecordsController.projection
+      ).exec();
+      if (record) {
+        if (isAccessible((req as any).user, record)) {
+          res.json(record);
+          next();
+        } else {
+          next(new ApiError(httpStatus.UNAUTHORIZED, "Not enough permissions"));
+        }
+      } else {
+        res.status(httpStatus.NOT_FOUND).end();
+      }
+    } catch (error) {
+      error.status = httpStatus.INTERNAL_SERVER_ERROR;
+      next(error);
+    }
   }
 
   public static async updateRecord(
