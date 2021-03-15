@@ -66,8 +66,7 @@ export default class RecordsController {
         res.status(httpStatus.NOT_FOUND).end();
       }
     } catch (error) {
-      error.status = httpStatus.INTERNAL_SERVER_ERROR;
-      next(error);
+      next(new ApiError(httpStatus.INTERNAL_SERVER_ERROR, error.message));
     }
   }
 
@@ -80,11 +79,10 @@ export default class RecordsController {
       const record = await Record.findByIdAndUpdate(req.params.id, req.body, {
         returnOriginal: false,
         projection: RecordsController.projection,
-      });
+      }).exec();
       res.json(record);
     } catch (error) {
-      error.status = httpStatus.INTERNAL_SERVER_ERROR;
-      next(error);
+      next(new ApiError(httpStatus.INTERNAL_SERVER_ERROR, error.message));
     }
   }
 
@@ -94,11 +92,14 @@ export default class RecordsController {
     next: NextFunction
   ): Promise<void> {
     try {
-      await Record.findByIdAndDelete(req.params.id);
-      res.status(httpStatus.OK).end();
+      const record = await Record.findByIdAndRemove(req.params.id).exec();
+      if(!record) {
+        next(new ApiError(httpStatus.NOT_FOUND, "There is no such record"));
+      } else {
+        res.status(httpStatus.OK).end();
+      }
     } catch (error) {
-      error.status = httpStatus.INTERNAL_SERVER_ERROR;
-      next(error);
+      next(new ApiError(httpStatus.INTERNAL_SERVER_ERROR, error.message));
     }
   }
 }
