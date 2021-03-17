@@ -13,3 +13,5 @@ export const dbConnect = async (mongoURL = config.mongoURL) => {
     useCreateIndex: true,
   });
 };
+
+export const connection = mongoose.connection;
