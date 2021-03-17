@@ -1,0 +1,93 @@
+{
+  "users": [
+    {
+      "name": "admin",
+      "password": "admin",
+      "role": "Admin"
+    },
+    {
+      "name": "editor",
+      "password": "verysecretpassword",
+      "role": "Editor"
+    },
+    {
+      "name": "tester",
+      "password": "123",
+      "role": "Tester"
+    }
+  ],
+
+  "roles": [
+    {
+      "name": "Admin",
+      "tables": ["Admin", "Editor", "Tester"],
+      "operations": ["CREATE", "READ", "UPDATE", "DELETE"],
+      "editFields": ["text", "isEditable"],
+      "editRestrictions": []
+    },
+    {
+      "name": "Editor",
+      "tables": ["Editor", "Tester"],
+      "operations": ["CREATE", "READ", "UPDATE"],
+      "editFields": ["text"],
+      "editRestrictions": [
+        {
+          "field": "isEditable",
+          "condition": true
+        }
+      ]
+    },
+    {
+      "name": "Tester",
+      "tables": ["Tester"],
+      "operations": ["CREATE", "READ"],
+      "editFields": [],
+      "editRestrictions": []
+    }
+  ],
+
+  "records": [
+    {
+      "_id": "604d9ad299a6ff3554405c2c",
+      "text": "record number 1",
+      "isEditable": false,
+      "owner": "Admin"
+    },
+    {
+      "_id": "604d9adf99a6ff3554405c2e",
+      "text": "record number 2",
+      "isEditable": true,
+      "owner": "Editor"
+    },
+    {
+      "_id": "604da5e45ff955477cdde343",
+      "text": "record number 3",
+      "isEditable": true,
+      "owner": "Tester"
+    },
+    {
+      "_id": "604da69f18a9cf23ec184048",
+      "text": "record number 4",
+      "isEditable": true,
+      "owner": "Admin"
+    },
+    {
+      "_id": "604da6a018a9cf23ec184049",
+      "text": "record number 5",
+      "isEditable": true,
+      "owner": "Editor"
+    },
+    {
+      "_id": "604da6a918a9cf23ec18404a",
+      "text": "record number 6",
+      "isEditable": true,
+      "owner": "Tester"
+    },
+    {
+      "_id": "604e59a90ae3ba2b5c4142f4",
+      "text": "record number 7",
+      "isEditable": false,
+      "owner": "Admin"
+    }
+  ]
+}

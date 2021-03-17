@@ -1,34 +1,13 @@
 import request from "supertest";
 import mongoose from "mongoose";
-import app from "../../app";
-import { User } from "../auth/model/user";
+import app from "../../src/app";
+import { User } from "../../src/app/auth/model/user";
+import { options } from "../../src/services/mongodb";
 
-const db = {
-  users: [
-    {
-      name: "admin",
-      password: "admin",
-      role: "Admin",
-    },
-    {
-      name: "editor",
-      password: "verysecretpassword",
-      role: "Editor",
-    },
-    {
-      name: "tester",
-      password: "123",
-      role: "Tester",
-    },
-  ]
-}
+import db from "./db.json";
 
 beforeAll(async () => {
-  await mongoose.connect(process.env.MONGO_URL, {
-    useNewUrlParser: true,
-    useCreateIndex: true,
-    useUnifiedTopology: true,
-  });
+  await mongoose.connect(process.env.MONGO_URL, options);
 });
 
 afterAll(async () => {
@@ -58,27 +37,27 @@ describe("POST /api/auth", () => {
     return request(app)
       .post("/api/auth")
       .send({ name: "admin", password: "admin" })
-      .set('Accept', 'application/json')
-      .expect('Content-Type', /json/)
+      .set("Accept", "application/json")
+      .expect("Content-Type", /json/)
       .expect(200)
-      .then(response => {
+      .then((response) => {
         expect(response.body.token).toBeTruthy();
         done();
       })
-      .catch(err => done(err))
+      .catch((err) => done(err));
   });
 
   it("Returns error for invalid password", (done) => {
     return request(app)
       .post("/api/auth")
       .send({ name: "admin", password: "somepassword" })
-      .set('Accept', 'application/json')
-      .expect('Content-Type', /json/)
+      .set("Accept", "application/json")
+      .expect("Content-Type", /json/)
       .expect(401)
-      .then(response => {
+      .then((response) => {
         expect(response.body.token).toBeUndefined();
         done();
       })
-      .catch(err => done(err))
-  })
+      .catch((err) => done(err));
+  });
 });

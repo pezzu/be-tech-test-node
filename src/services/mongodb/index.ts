@@ -6,12 +6,15 @@ mongoose.connection.on(
   console.error.bind(console, "DB connection error:")
 );
 
+export const options = {
+  useNewUrlParser: true,
+  useUnifiedTopology: true,
+  useCreateIndex: true,
+  useFindAndModify: false,
+};
+
 export const dbConnect = async (mongoURL = config.mongoURL) => {
-  return mongoose.connect(mongoURL, {
-    useNewUrlParser: true,
-    useUnifiedTopology: true,
-    useCreateIndex: true,
-  });
+  return mongoose.connect(mongoURL, options);
 };
 
 export const connection = mongoose.connection;

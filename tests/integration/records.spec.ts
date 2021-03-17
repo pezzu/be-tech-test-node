@@ -1,110 +1,17 @@
 import mongoose from "mongoose";
 import { response } from "express";
 import request from "supertest";
-import app from "../../app";
-import { Record } from "./model";
-import { Role } from "../auth/model/role";
-import { User } from "../auth/model/user";
 import httpStatus from "http-status";
+import app from "../../src/app";
+import { Record } from "../../src/app/records/model";
+import { Role } from "../../src/app/auth/model/role";
+import { User } from "../../src/app/auth/model/user";
+import { options } from "../../src/services/mongodb";
 
-const mockUsers = [
-  {
-    name: "admin",
-    password: "admin",
-    role: "Admin",
-  },
-  {
-    name: "editor",
-    password: "verysecretpassword",
-    role: "Editor",
-  },
-  {
-    name: "tester",
-    password: "123",
-    role: "Tester",
-  },
-];
-
-const mockRoles = [
-  {
-    name: "Admin",
-    tables: ["Admin", "Editor", "Tester"],
-    operations: ["CREATE", "READ", "UPDATE", "DELETE"],
-    editFields: ["text", "isEditable"],
-    editRestrictions: [],
-  },
-  {
-    name: "Editor",
-    tables: ["Editor", "Tester"],
-    operations: ["CREATE", "READ", "UPDATE"],
-    editFields: ["text"],
-    editRestrictions: [
-      {
-        field: "isEditable",
-        condition: true,
-      },
-    ],
-  },
-  {
-    name: "Tester",
-    tables: ["Tester"],
-    operations: ["CREATE", "READ"],
-    editFields: [],
-    editRestrictions: [],
-  },
-];
-
-const mockRecords = [
-  {
-    _id: "604d9ad299a6ff3554405c2c",
-    text: "record number 1",
-    isEditable: false,
-    owner: "Admin",
-  },
-  {
-    _id: "604d9adf99a6ff3554405c2e",
-    text: "record number 2",
-    isEditable: true,
-    owner: "Editor",
-  },
-  {
-    _id: "604da5e45ff955477cdde343",
-    text: "record number 3",
-    isEditable: true,
-    owner: "Tester",
-  },
-  {
-    _id: "604da69f18a9cf23ec184048",
-    text: "record number 4",
-    isEditable: true,
-    owner: "Admin",
-  },
-  {
-    _id: "604da6a018a9cf23ec184049",
-    text: "record number 5",
-    isEditable: true,
-    owner: "Editor",
-  },
-  {
-    _id: "604da6a918a9cf23ec18404a",
-    text: "record number 6",
-    isEditable: true,
-    owner: "Tester",
-  },
-  {
-    _id: "604e59a90ae3ba2b5c4142f4",
-    text: "record number 7",
-    isEditable: false,
-    owner: "Admin",
-  },
-];
+import db from "./db.json";
 
 beforeAll(async () => {
-  await mongoose.connect(process.env.MONGO_URL, {
-    useNewUrlParser: true,
-    useCreateIndex: true,
-    useUnifiedTopology: true,
-  });
+  await mongoose.connect(process.env.MONGO_URL, options);
 });
 
 afterAll(async () => {
@@ -113,9 +20,9 @@ afterAll(async () => {
 
 beforeEach(async (done) => {
   try {
-    await User.insertMany(mockUsers);
-    await Role.insertMany(mockRoles);
-    await Record.insertMany(mockRecords);
+    await User.insertMany(db.users);
+    await Role.insertMany(db.roles);
+    await Record.insertMany(db.records);
     done();
   } catch (err) {
     done(err);
@@ -124,9 +31,9 @@ beforeEach(async (done) => {
 
 afterEach(async (done) => {
   try {
-    await User.remove({}).exec();
-    await Role.remove({}).exec();
-    await Record.remove({}).exec();
+    await User.deleteMany({});
+    await Role.deleteMany({});
+    await Record.deleteMany({});
     done();
   } catch (err) {
     done(err);
@@ -160,7 +67,7 @@ describe("/GET /api/record", () => {
 
       expect(response.status).toBe(200);
       expect(response.headers["content-type"]).toContain("json");
-      expect(response.body).toEqual(mockRecords);
+      expect(response.body).toEqual(db.records);
 
       done();
     } catch (err) {
@@ -183,7 +90,7 @@ describe("/GET /api/record", () => {
       expect(response.status).toBe(200);
       expect(response.headers["content-type"]).toContain("json");
       expect(response.body).toEqual(
-        mockRecords.filter((rec) => ["Editor", "Tester"].includes(rec.owner))
+        db.records.filter((rec) => ["Editor", "Tester"].includes(rec.owner))
       );
 
       done();
@@ -207,7 +114,7 @@ describe("/GET /api/record", () => {
       expect(response.status).toBe(200);
       expect(response.headers["content-type"]).toContain("json");
       expect(response.body).toEqual(
-        mockRecords.filter((rec) => rec.owner === "Tester")
+        db.records.filter((rec) => rec.owner === "Tester")
       );
 
       done();
@@ -238,7 +145,7 @@ describe("/GET /api/record/:id", () => {
     done
   ): Promise<void> => {
     try {
-      const user = mockUsers.find((user) => user.name === name);
+      const user = db.users.find((user) => user.name === name);
       const agent = request(app);
       const authResponse = await agent
         .post("/api/auth")
@@ -251,7 +158,7 @@ describe("/GET /api/record/:id", () => {
 
       expect(response.status).toBe(200);
       expect(response.body).toMatchObject(
-        mockRecords.find((rec) => rec._id === id)
+        db.records.find((rec) => rec._id === id)
       );
       done();
     } catch (err) {
@@ -265,7 +172,7 @@ describe("/GET /api/record/:id", () => {
     done
   ): Promise<void> => {
     try {
-      const user = mockUsers.find((user) => user.name === name);
+      const user = db.users.find((user) => user.name === name);
       const agent = request(app);
       const authResponse = await agent
         .post("/api/auth")
@@ -285,55 +192,55 @@ describe("/GET /api/record/:id", () => {
 
   it("Tester user can read Tester record", async (done) => {
     const recId = "604da6a918a9cf23ec18404a";
-    expect(mockRecords.find((rec) => rec._id === recId).owner).toBe("Tester");
+    expect(db.records.find((rec) => rec._id === recId).owner).toBe("Tester");
     await testCanReadOne("tester", recId, done);
   });
 
   it("Tester user cannot read Editor record", async (done) => {
     const recId = "604da6a018a9cf23ec184049";
-    expect(mockRecords.find((rec) => rec._id === recId).owner).toBe("Editor");
+    expect(db.records.find((rec) => rec._id === recId).owner).toBe("Editor");
     await testCannotReadOne("tester", recId, done);
   });
 
   it("Tester user cannot read Admin record", async (done) => {
     const recId = "604e59a90ae3ba2b5c4142f4";
-    expect(mockRecords.find((rec) => rec._id === recId).owner).toBe("Admin");
+    expect(db.records.find((rec) => rec._id === recId).owner).toBe("Admin");
     await testCannotReadOne("tester", recId, done);
   });
 
   it("Editor user can read Tester record", async (done) => {
     const recId = "604da6a918a9cf23ec18404a";
-    expect(mockRecords.find((rec) => rec._id === recId).owner).toBe("Tester");
+    expect(db.records.find((rec) => rec._id === recId).owner).toBe("Tester");
     await testCanReadOne("editor", recId, done);
   });
 
   it("Editor user can read Editor record", async (done) => {
     const recId = "604da6a018a9cf23ec184049";
-    expect(mockRecords.find((rec) => rec._id === recId).owner).toBe("Editor");
+    expect(db.records.find((rec) => rec._id === recId).owner).toBe("Editor");
     await testCanReadOne("editor", recId, done);
   });
 
   it("Editor user cannot read Admin record", async (done) => {
     const recId = "604e59a90ae3ba2b5c4142f4";
-    expect(mockRecords.find((rec) => rec._id === recId).owner).toBe("Admin");
+    expect(db.records.find((rec) => rec._id === recId).owner).toBe("Admin");
     await testCannotReadOne("editor", recId, done);
   });
 
   it("Admin user can read Tester record", async (done) => {
     const recId = "604da6a918a9cf23ec18404a";
-    expect(mockRecords.find((rec) => rec._id === recId).owner).toBe("Tester");
+    expect(db.records.find((rec) => rec._id === recId).owner).toBe("Tester");
     await testCanReadOne("admin", recId, done);
   });
 
   it("Admin user can read Editor record", async (done) => {
     const recId = "604da6a018a9cf23ec184049";
-    expect(mockRecords.find((rec) => rec._id === recId).owner).toBe("Editor");
+    expect(db.records.find((rec) => rec._id === recId).owner).toBe("Editor");
     await testCanReadOne("admin", recId, done);
   });
 
   it("Admin user can read Admin record", async (done) => {
     const recId = "604e59a90ae3ba2b5c4142f4";
-    expect(mockRecords.find((rec) => rec._id === recId).owner).toBe("Admin");
+    expect(db.records.find((rec) => rec._id === recId).owner).toBe("Admin");
     await testCanReadOne("admin", recId, done);
   });
 });
@@ -440,13 +347,13 @@ describe("/POST /api/record/", () => {
 
 describe("/PUT /api/record/", () => {
   const testCanUpdate = async (name: string, id: string, update: object) => {
-    const user = mockUsers.find((user) => user.name === name);
+    const user = db.users.find((user) => user.name === name);
     const agent = request(app);
     const authResponse = await agent
       .post("/api/auth")
       .send({ name, password: user.password });
 
-    const record = mockRecords.find((rec) => rec._id === id);
+    const record = db.records.find((rec) => rec._id === id);
     const response = await agent
       .put(`/api/record/${id}`)
       .send(update)
@@ -458,13 +365,13 @@ describe("/PUT /api/record/", () => {
   };
 
   const testCannotUpdate = async (name: string, id: string, update: object) => {
-    const user = mockUsers.find((user) => user.name === name);
+    const user = db.users.find((user) => user.name === name);
     const agent = request(app);
     const authResponse = await agent
       .post("/api/auth")
       .send({ name, password: user?.password || "fake" });
 
-    const record = mockRecords.find((rec) => rec._id === id);
+    const record = db.records.find((rec) => rec._id === id);
     const response = await agent
       .put(`/api/record/${id}`)
       .send(update)
@@ -476,7 +383,7 @@ describe("/PUT /api/record/", () => {
 
   it("Unauthenticated user cannot update any record", async (done) => {
     await Promise.all(
-      mockRecords.map(async (rec) =>
+      db.records.map(async (rec) =>
         testCannotUpdate("guest", rec._id, { text: "New text" })
       )
     )
@@ -485,12 +392,15 @@ describe("/PUT /api/record/", () => {
   });
 
   it("Tester user cannot update any record", async (done) => {
-    const texts = mockRecords.map(async (rec) =>
+    const texts = db.records.map(async (rec) =>
       testCannotUpdate("tester", rec._id, { text: "New text" })
     );
 
-    const fields = mockRecords.map(async (rec) =>
-      testCannotUpdate("tester", rec._id, { text: rec.text, isEditable: !rec.isEditable })
+    const fields = db.records.map(async (rec) =>
+      testCannotUpdate("tester", rec._id, {
+        text: rec.text,
+        isEditable: !rec.isEditable,
+      })
     );
 
     await Promise.all([...fields, ...texts])
@@ -499,7 +409,7 @@ describe("/PUT /api/record/", () => {
   });
 
   it("Editor user can update Tester and Editor records [text] field when isEditable is true", async (done) => {
-    const editorRecords = mockRecords.filter(
+    const editorRecords = db.records.filter(
       (rec) => rec.owner === "Editor" || rec.owner === "Tester"
     );
 
@@ -516,12 +426,11 @@ describe("/PUT /api/record/", () => {
 
   it("Editor user cannot update Tester and Editor records [isEditable] field", async (done) => {
     await Promise.all(
-      mockRecords.map(async (rec) =>
-        testCannotUpdate(
-          "editor",
-          rec._id,
-          { text: rec.text, isEditable: !rec.isEditable }
-        )
+      db.records.map(async (rec) =>
+        testCannotUpdate("editor", rec._id, {
+          text: rec.text,
+          isEditable: !rec.isEditable,
+        })
       )
     )
       .then(() => done())
@@ -529,7 +438,7 @@ describe("/PUT /api/record/", () => {
   });
 
   it("Editor user cannot update Tester and Editor records when isEditable is false", async (done) => {
-    const editorRecords = mockRecords.filter(
+    const editorRecords = db.records.filter(
       (rec) => rec.owner === "Editor" || rec.owner === "Tester"
     );
 
@@ -545,7 +454,7 @@ describe("/PUT /api/record/", () => {
   });
 
   it("Editor user cannot update Admin a record", async (done) => {
-    const adminRecords = mockRecords.filter((rec) => rec.owner === "Admin");
+    const adminRecords = db.records.filter((rec) => rec.owner === "Admin");
 
     await Promise.all(
       adminRecords.map(async (rec) =>
@@ -557,12 +466,15 @@ describe("/PUT /api/record/", () => {
   });
 
   it("Admin user can update any record", async (done) => {
-    const texts = mockRecords.map(async (rec) =>
+    const texts = db.records.map(async (rec) =>
       testCanUpdate("admin", rec._id, { text: "New text" })
     );
 
-    const fields = mockRecords.map(async (rec) =>
-      testCanUpdate("admin", rec._id, { text: rec.text, isEditable: !rec.isEditable })
+    const fields = db.records.map(async (rec) =>
+      testCanUpdate("admin", rec._id, {
+        text: rec.text,
+        isEditable: !rec.isEditable,
+      })
     );
 
     await Promise.all([...texts, ...fields])
@@ -573,7 +485,7 @@ describe("/PUT /api/record/", () => {
 
 describe("/DELETE /api/record/", () => {
   const testCanDelete = async (name: string, id: string) => {
-    const user = mockUsers.find((user) => user.name === name);
+    const user = db.users.find((user) => user.name === name);
     const agent = request(app);
     const authResponse = await agent
       .post("/api/auth")
@@ -591,7 +503,7 @@ describe("/DELETE /api/record/", () => {
   };
 
   const testCannotDelete = async (name: string, id: string) => {
-    const user = mockUsers.find((user) => user.name === name);
+    const user = db.users.find((user) => user.name === name);
     const agent = request(app);
     const authResponse = await agent
       .post("/api/auth")
@@ -609,7 +521,7 @@ describe("/DELETE /api/record/", () => {
 
   it("Unauthenticated user cannot delete a record", async (done) => {
     await Promise.all(
-      mockRecords.map(async (rec) => await testCannotDelete("guest", rec._id))
+      db.records.map(async (rec) => await testCannotDelete("guest", rec._id))
     )
       .then(() => done())
       .catch((err) => done(err));
@@ -617,7 +529,7 @@ describe("/DELETE /api/record/", () => {
 
   it("Tester user cannot delete a record", async (done) => {
     await Promise.all(
-      mockRecords.map(async (rec) => await testCannotDelete("tester", rec._id))
+      db.records.map(async (rec) => await testCannotDelete("tester", rec._id))
     )
       .then(() => done())
       .catch((err) => done(err));
@@ -625,7 +537,7 @@ describe("/DELETE /api/record/", () => {
 
   it("Editor user cannot delete a record", async (done) => {
     await Promise.all(
-      mockRecords.map(async (rec) => await testCannotDelete("editor", rec._id))
+      db.records.map(async (rec) => await testCannotDelete("editor", rec._id))
     )
       .then(() => done())
       .catch((err) => done(err));
@@ -633,7 +545,7 @@ describe("/DELETE /api/record/", () => {
 
   it("Admin user can delete any record", async (done) => {
     await Promise.all(
-      mockRecords.map(async (rec) => await testCanDelete("admin", rec._id))
+      db.records.map(async (rec) => await testCanDelete("admin", rec._id))
     )
       .then(() => done())
       .catch((err) => done(err));
