@@ -13,7 +13,7 @@ export default class AuthController {
   ): Promise<void> {
     const { name, password } = req.body;
 
-    const user = await User.findOne({name: name}).exec();
+    const user = await User.findOne({ name }).exec();
     if (user && user.password === password) {
       const token = jwt.sign({ user: name }, config.secret);
       res.cookie("token", token, { expires: new Date(360000 + Date.now()) });

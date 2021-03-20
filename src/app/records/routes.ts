@@ -22,8 +22,8 @@ export default class RecordsRouter {
       RecordsController.createRecord
     );
     router.get(
-      "/:id", 
-      authorize(), 
+      "/:id",
+      authorize(),
       RecordsController.readRecord
     );
     router.put(

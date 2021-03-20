@@ -22,12 +22,12 @@ export function isRecordEditable(
   record: IRecord,
   update: object,
 ): boolean {
-  for(let field in update) {
+  for(const field in update) {
     if(!user.role.editFields.includes(field)) {
       return false;
     }
   }
-  for(let restriction of user.role.editRestrictions) {
+  for(const restriction of user.role.editRestrictions) {
     if(record[restriction.field] !== restriction.condition) {
       return false;
     }

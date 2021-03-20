@@ -7,8 +7,8 @@ type EditRestriction = {
 
 export interface IRole {
   name: string;
-  tables: Array<string>;
-  operations: Array<string>;
-  editFields: Array<string>;
-  editRestrictions: Array<EditRestriction>;
+  tables: string[];
+  operations: string[];
+  editFields: string[];
+  editRestrictions: EditRestriction[];
 }
