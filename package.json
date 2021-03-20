@@ -35,6 +35,7 @@
     "dev": "concurrently --kill-others-on-fail \"yarn:build:watch\" \"yarn:server:watch\"",
     "start": "node dist/server.js",
     "test": "jest --runInBand --detectOpenHandles --colors --verbose",
-    "clean": "rimraf dist node_modules"
+    "clean": "rimraf dist node_modules",
+    "ci": "yarn install --frozen-lockfile"
   }
 }

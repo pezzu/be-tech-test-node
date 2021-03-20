@@ -1,0 +1,12 @@
+**/.env
+**/.eslintcache
+**/.git
+**/.gitignore
+**/dist
+**/node_modules
+**/README.md
+**/LICENSE
+**/.vscode
+**/npm-debug.log
+**/coverage
+**/tests
