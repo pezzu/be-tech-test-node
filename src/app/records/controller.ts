@@ -2,11 +2,7 @@ import { NextFunction, Request, Response } from "express";
 import httpStatus from "http-status";
 import { Record, IRecordModel } from "./model";
 import ApiError from "../../helpers/ApiError";
-import {
-  isRecordAccessible,
-  isOperationAllowed,
-  isRecordEditable,
-} from "../auth/permissions";
+import { isRecordAccessible, isRecordEditable } from "../auth/permissions";
 import { IUserExpanded } from "../../interfaces/user";
 
 export default class RecordsController {
@@ -17,12 +13,6 @@ export default class RecordsController {
     res: Response,
     next: NextFunction
   ): Promise<void> {
-    const user: IUserExpanded = (req as any).user;
-    if (!isOperationAllowed(user, "READ")) {
-      next(new ApiError(httpStatus.UNAUTHORIZED, "Not enough permissions"));
-      return;
-    }
-
     try {
       const records = await Record.find(
         {},
@@ -41,12 +31,6 @@ export default class RecordsController {
     res: Response,
     next: NextFunction
   ): Promise<void> {
-    const user: IUserExpanded = (req as any).user;
-    if (!isOperationAllowed(user, "CREATE")) {
-      next(new ApiError(httpStatus.UNAUTHORIZED, "Not enough permissions"));
-      return;
-    }
-
     const record = new Record({
       ...req.body,
       owner: (req as any).user.role.name,
@@ -68,12 +52,6 @@ export default class RecordsController {
     res: Response,
     next: NextFunction
   ): Promise<void> {
-    const user: IUserExpanded = (req as any).user;
-    if (!isOperationAllowed(user, "READ")) {
-      next(new ApiError(httpStatus.UNAUTHORIZED, "Not enough permissions"));
-      return;
-    }
-
     try {
       const id = req.params.id;
       const record = await Record.findById(
@@ -101,11 +79,6 @@ export default class RecordsController {
     next: NextFunction
   ): Promise<void> {
     const user: IUserExpanded = (req as any).user;
-    if (!isOperationAllowed(user, "UPDATE")) {
-      next(new ApiError(httpStatus.UNAUTHORIZED, "Not enough permissions"));
-      return;
-    }
-
     try {
       const record = await Record.findById(
         req.params.id,
@@ -138,12 +111,6 @@ export default class RecordsController {
     res: Response,
     next: NextFunction
   ): Promise<void> {
-    const user: IUserExpanded = (req as any).user;
-    if (!isOperationAllowed(user, "DELETE")) {
-      next(new ApiError(httpStatus.UNAUTHORIZED, "Not enough permissions"));
-      return;
-    }
-
     try {
       const record = await Record.findByIdAndRemove(req.params.id).exec();
       if (!record) {

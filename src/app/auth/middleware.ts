@@ -7,6 +7,8 @@ import ApiError from "../../helpers/ApiError";
 import { Role } from "./model/role";
 import { User } from "./model/user";
 import { IUserExpanded } from "../../interfaces/user";
+import { Method } from "../../interfaces/role";
+import { isOperationAllowed } from "./permissions";
 
 // https://github.com/Microsoft/TypeScript/issues/26048
 declare module 'util' {
@@ -49,4 +51,15 @@ export function authorize(roles: string[] = []) {
       next(new ApiError(httpStatus.INTERNAL_SERVER_ERROR, err.message));
     }
   };
+}
+
+export function validateMethodAccess(method:Method) {
+  return (req: Request, res:Response, next:NextFunction) => {
+    const user: IUserExpanded = (req as any).user;
+    if(isOperationAllowed(user, method)) {
+      next();
+    } else {
+      next(new ApiError(httpStatus.UNAUTHORIZED, "Not enough permissions"));
+    }
+  }
 }
