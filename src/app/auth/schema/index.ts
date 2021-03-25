@@ -10,3 +10,19 @@ export const AuthSchema = {
     },
   },
 };
+
+export const CreateUserSchema = {
+  type: "object",
+  required: ["name", "password", "role"],
+  properties: {
+    name: {
+      type: "string",
+    },
+    password: {
+      type: "string",
+    },
+    role: {
+      type: "string",
+    }
+  },
+}
