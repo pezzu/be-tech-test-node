@@ -7,11 +7,9 @@ import { User } from "./model/user";
 
 export default class AuthController {
   private static async login(req: Request, res: Response, next: NextFunction): Promise<void> {
-    const { name, password } = req.body;
-
-    const user = await User.findOne({ name }).exec();
-    if (user && user.password === password) {
-      const token = jwt.sign({ user: name }, config.secret);
+    const user = await User.findOneAndValidate(req.body);
+    if (user) {
+      const token = jwt.sign({ user: user.name }, config.secret);
       res.cookie("token", token, { expires: new Date(360000 + Date.now()) });
       res.json({ token });
     } else {

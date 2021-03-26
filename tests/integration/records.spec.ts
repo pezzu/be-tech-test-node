@@ -20,7 +20,7 @@ afterAll(async () => {
 
 beforeEach(async (done) => {
   try {
-    await User.insertMany(db.users);
+    await User.insertMany(db.users.map(({ name, password, role }) => ({ name, password, role })));
     await Role.insertMany(db.roles);
     await Record.insertMany(db.records);
     done();

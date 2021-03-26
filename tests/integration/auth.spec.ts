@@ -16,7 +16,7 @@ afterAll(async () => {
 
 beforeEach(async (done) => {
   try {
-    await User.insertMany(db.users);
+    await User.insertMany(db.users.map(({ name, password, role }) => ({ name, password, role })));
     done();
   } catch (err) {
     done(err);
@@ -76,7 +76,7 @@ describe("POST /api/auth/signup", () => {
       const dbUser = await User.findOne({ name: "new.user" }).exec();
       expect(dbUser).not.toBeNull();
       expect(dbUser.name).toBe("new.user");
-      expect(dbUser.password).toBe("user.password");
+      expect(dbUser.password).toBeTruthy();
       expect(dbUser.role).toBe("user.role");
       done();
     } catch (err) {
